@@ -21,6 +21,23 @@ class YIKES_Simple_Taxonomy_Options {
 		add_action( 'admin_init', array( $this, 'init_options' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_footer_text', array( $this, 'footer_callout' ) );
+		add_action( 'admin_init', array( $this, 'set_screen_options' ) );
+	}
+
+	/**
+	 * Set Screen Options.
+	 */
+	public function set_screen_options() {
+		$this->options = get_option( YIKES_STO_OPTION_NAME, array() );
+		$taxonomies    = $this->get_taxonomies();
+		$enabled       = isset( $this->options['enabled_taxonomies'] ) ? array_flip( $this->options['enabled_taxonomies'] ) : array();
+
+		foreach ( $taxonomies as $taxonomy ) {
+			if ( isset( $this->options['enabled_taxonomies'] ) && isset( $enabled[ $taxonomy ] ) ) {
+				$user_id = get_current_user_id();
+				update_user_option( $user_id, 'edit_' . $taxonomy . '_per_page', 500 );
+			}
+		}
 	}
 
 	/**
@@ -144,13 +161,16 @@ class YIKES_Simple_Taxonomy_Options {
 				$tax_name         = $tax_object && isset( $tax_object->labels ) ? $tax_object->labels->name : $taxonomy;
 				$post_type        = $tax_object && isset( $tax_object->object_type ) && isset( $tax_object->object_type[0] ) ? $tax_object->object_type[0] : 'post';
 				$post_type_object = get_post_type_object( $post_type );
-				$post_type_label  = $post_type_object->labels->name;
-				$selected         = isset( $this->options['enabled_taxonomies'] ) && isset( $enabled[ $taxonomy ] ) ? 'selected="selected"' : '';
-				?>
-					<option value="<?php echo esc_attr( $taxonomy ); ?>" <?php echo esc_attr( $selected ); ?>>
-						<?php echo esc_html( $tax_name ) . ' <small>(' . esc_html( $post_type_label ) . ')</small>'; ?>
-					</option>
-				<?php
+
+				if ( $post_type_object ) {
+					$post_type_label  = $post_type_object->labels->name;
+					$selected         = isset( $this->options['enabled_taxonomies'] ) && isset( $enabled[ $taxonomy ] ) ? 'selected="selected"' : '';
+					?>
+						<option value="<?php echo esc_attr( $taxonomy ); ?>" <?php echo esc_attr( $selected ); ?>>
+							<?php echo esc_html( $tax_name ) . ' <small>(' . esc_html( $post_type_label ) . ')</small>'; ?>
+						</option>
+					<?php
+				}
 			}
 			?>
 			</select>
@@ -181,6 +201,8 @@ class YIKES_Simple_Taxonomy_Options {
 			'product_cat',
 			'product_type',
 			'edd_log_type',
+			'term_translations',
+			'post_translations',
 		);
 
 		/**
